@@ -1,4 +1,8 @@
-module LocalStorageValue exposing (LocalStorageValue, decode, encode)
+module LocalStorageValue exposing
+    ( LocalStorageValue
+    , decode
+    , encode
+    )
 
 import ColorTheme exposing (ColorTheme)
 import Json.Decode as Decode

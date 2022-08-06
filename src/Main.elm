@@ -1,11 +1,43 @@
-port module Main exposing (Model, ModelExposedToStorage, Msg(..), appListItemClass, emptyModel, init, main, setStorage, update, updateWithStorage, view)
+port module Main exposing
+    ( Model
+    , ModelExposedToStorage
+    , Msg(..)
+    , appListItemClass
+    , emptyModel
+    , init
+    , main
+    , setStorage
+    , update
+    , updateWithStorage
+    , view
+    )
 
 import Browser
 import ColorTheme exposing (ColorTheme)
 import Common.PullDown as PullDown exposing (Msg)
-import Html exposing (Html, button, div, header, i, nav, text, textarea)
-import Html.Attributes exposing (class, placeholder, title, value)
-import Html.Events exposing (onClick, onInput)
+import Html
+    exposing
+        ( Html
+        , button
+        , div
+        , header
+        , i
+        , nav
+        , text
+        , textarea
+        )
+import Html.Attributes
+    exposing
+        ( class
+        , placeholder
+        , title
+        , value
+        )
+import Html.Events
+    exposing
+        ( onClick
+        , onInput
+        )
 import Html.Lazy exposing (lazy)
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -56,9 +88,15 @@ buildModelFrom value =
 
         decodedValue =
             maybeValue
-                |> Maybe.withDefault { layoutMode = emptyModel.layoutMode, colorTheme = emptyModel.colorTheme }
+                |> Maybe.withDefault
+                    { layoutMode = emptyModel.layoutMode
+                    , colorTheme = emptyModel.colorTheme
+                    }
     in
-    { emptyModel | layoutMode = decodedValue.layoutMode, colorTheme = decodedValue.colorTheme }
+    { emptyModel
+        | layoutMode = decodedValue.layoutMode
+        , colorTheme = decodedValue.colorTheme
+    }
 
 
 init : Decode.Value -> ( Model, Cmd Msg )
@@ -233,7 +271,11 @@ viewNavigation model =
                                 , { id = "View/Layout/Single"
                                   , label = "Single"
                                   , children = PullDown.empty
-                                  , checked = model.layoutMode == LayoutMode.Focus || model.layoutMode == LayoutMode.Read
+                                  , checked =
+                                        model.layoutMode
+                                            == LayoutMode.Focus
+                                            || model.layoutMode
+                                            == LayoutMode.Read
                                   }
                                 ]
                       , checked = False
@@ -270,14 +312,20 @@ viewNavigation model =
 
 viewEditor : Model -> Html Msg
 viewEditor model =
-    div [ class "app-editor" ]
-        [ textarea [ onInput OnInput, placeholder "# Markdown text here", value model.note.text ] []
+    div
+        [ class "app-editor" ]
+        [ textarea
+            [ onInput OnInput, placeholder "# Markdown text here", value model.note.text ]
+            []
         ]
 
 
 viewPreview : Note -> Html Msg
 viewPreview note =
-    div [ class "app-preview" ] [ Markdown.toHtmlWith markdownOptions [] note.text ]
+    div
+        [ class "app-preview" ]
+        [ Markdown.toHtmlWith markdownOptions [] note.text ]
+
 
 markdownOptions : Markdown.Options
 markdownOptions =
@@ -287,22 +335,37 @@ markdownOptions =
     , smartypants = False
     }
 
+
 viewControl : Model -> Html Msg
 viewControl model =
     let
         viewSwitchModeIcon =
             if model.layoutMode == LayoutMode.Focus then
-                button [ class "btn", onClick (SwitchLayout LayoutMode.Read) ]
-                    [ i [ class "material-icons", title "Preview" ] [ text "remove_red_eye" ] ]
+                button
+                    [ class "btn", onClick (SwitchLayout LayoutMode.Read) ]
+                    [ i
+                        [ class "material-icons", title "Preview" ]
+                        [ text "remove_red_eye" ]
+                    ]
 
             else if model.layoutMode == LayoutMode.Read then
-                button [ class "btn", onClick (SwitchLayout LayoutMode.Focus) ]
-                    [ i [ class "material-icons", title "Edit" ] [ text "edit" ] ]
+                button
+                    [ class "btn"
+                    , onClick (SwitchLayout LayoutMode.Focus)
+                    ]
+                    [ i
+                        [ class "material-icons", title "Edit" ]
+                        [ text "edit" ]
+                    ]
 
             else
-                div [] []
+                div
+                    []
+                    []
     in
-    div [ class "app-control" ] [ viewSwitchModeIcon ]
+    div
+        [ class "app-control" ]
+        [ viewSwitchModeIcon ]
 
 
 themeClass : ColorTheme -> String
@@ -383,7 +446,11 @@ port newFile : () -> Cmd msg
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.batch [ fileLoaded FileLoaded, fileWritten FileWritten, fileBuilt NewFileBuilt ]
+    Sub.batch
+        [ fileLoaded FileLoaded
+        , fileWritten FileWritten
+        , fileBuilt NewFileBuilt
+        ]
 
 
 

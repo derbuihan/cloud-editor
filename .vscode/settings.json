@@ -1,0 +1,19 @@
+{
+    "elm.compiler": "./node_modules/.bin/elm",
+    "elm.makeCommand": "./node_modules/.bin/elm-make",
+    "elm.formatCommand": "./node_modules/.bin/elm-format",
+    "[elm]": {
+        "editor.formatOnSave": true,
+        "editor.rulers": [
+            100
+        ],
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.rulers": [
+            80
+        ],
+    },
+    "prettier.tabWidth": 4
+}

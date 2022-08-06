@@ -1,4 +1,13 @@
-module LayoutMode exposing (LayoutMode(..), decode, encode, toString, toggleMainColumns, transitToComparableMode, transitToEditableMode, transitToPreviewMode)
+module LayoutMode exposing
+    ( LayoutMode(..)
+    , decode
+    , encode
+    , toString
+    , toggleMainColumns
+    , transitToComparableMode
+    , transitToEditableMode
+    , transitToPreviewMode
+    )
 
 import Json.Decode as Decode
 import Json.Encode as Encode
