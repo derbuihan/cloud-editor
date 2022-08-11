@@ -39,6 +39,7 @@ import Html.Events
         , onInput
         )
 import Html.Lazy exposing (lazy)
+import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import LayoutMode exposing (LayoutMode)
@@ -55,6 +56,7 @@ type alias Model =
     { colorTheme : ColorTheme
     , note : Note
     , layoutMode : LayoutMode
+    , cloudFiles : List String
     }
 
 
@@ -69,6 +71,7 @@ emptyModel =
     { colorTheme = ColorTheme.White
     , note = Note.new
     , layoutMode = LayoutMode.Write
+    , cloudFiles = []
     }
 
 
@@ -101,7 +104,12 @@ buildModelFrom value =
 
 init : Decode.Value -> ( Model, Cmd Msg )
 init value =
-    ( buildModelFrom value, Cmd.none )
+    ( buildModelFrom value
+    , Http.get
+        { url = "files/text.md"
+        , expect = Http.expectString (GotCloudFile "text.md")
+        }
+    )
 
 
 
@@ -115,6 +123,9 @@ type Msg
     | FileWritten Bool
     | NewFileBuilt Decode.Value
     | GotPullDownMsg PullDown.Msg
+    | GotListCloudFiles (Result Http.Error (List String))
+    | GotCloudFile String (Result Http.Error String)
+    | GotPostCloudResponse (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -173,15 +184,15 @@ update msg model =
         FileWritten _ ->
             ( model, Cmd.none )
 
-        GotPullDownMsg (PullDown.OnClick id) ->
-            case id of
-                "File/New" ->
+        GotPullDownMsg pullDownMsg ->
+            case pullDownMsg of
+                PullDown.NewFile ->
                     ( model, Cmd.batch [ newFile () ] )
 
-                "File/Open" ->
+                PullDown.OpenFile ->
                     ( model, Cmd.batch [ openFile () ] )
 
-                "File/Save" ->
+                PullDown.SaveFile ->
                     case model.note.lastModified of
                         Just _ ->
                             ( model, Cmd.batch [ writeFile model.note.text ] )
@@ -189,20 +200,105 @@ update msg model =
                         Nothing ->
                             ( model, Cmd.batch [ saveFile model.note.text ] )
 
-                "View/Theme/Dark" ->
-                    ( { model | colorTheme = ColorTheme.Dark }, Cmd.none )
+                PullDown.NewCloudFile ->
+                    ( { model
+                        | note = Note.new
+                      }
+                    , Cmd.batch [ sendTitle model.note.name ]
+                    )
 
-                "View/Theme/White" ->
-                    ( { model | colorTheme = ColorTheme.White }, Cmd.none )
+                PullDown.GetCloudFiles ->
+                    ( model
+                    , Http.get
+                        { url = "files"
+                        , expect = Http.expectJson GotListCloudFiles (Decode.list Decode.string)
+                        }
+                    )
 
-                "View/Layout/Split" ->
-                    ( { model | layoutMode = LayoutMode.Write }, Cmd.none )
+                PullDown.OpenCloudFile file ->
+                    ( model
+                    , Http.get
+                        { url = "files/" ++ file
+                        , expect = Http.expectString (GotCloudFile file)
+                        }
+                    )
 
-                "View/Layout/Single" ->
-                    ( { model | layoutMode = LayoutMode.Focus }, Cmd.none )
+                PullDown.SaveCloudFile ->
+                    ( model
+                    , Http.post
+                        { url = "files/" ++ model.note.name
+                        , body = Http.stringBody "application/json" model.note.text
+                        , expect = Http.expectString GotPostCloudResponse
+                        }
+                    )
 
-                _ ->
+                PullDown.ChangeTitle ->
+                    let
+                        title =
+                            Note.toTitle model.note
+                    in
+                    if title == "" then
+                        ( model, Cmd.batch [ sendTitle model.note.name ] )
+
+                    else
+                        ( { model
+                            | note =
+                                { name = title
+                                , lastModified = model.note.lastModified
+                                , text = model.note.text
+                                }
+                          }
+                        , Cmd.batch [ sendTitle title ]
+                        )
+
+                PullDown.ChangeTheme theme ->
+                    case theme of
+                        ColorTheme.Dark ->
+                            ( { model | colorTheme = ColorTheme.Dark }, Cmd.none )
+
+                        ColorTheme.White ->
+                            ( { model | colorTheme = ColorTheme.White }, Cmd.none )
+
+                PullDown.ChangeLayout layout ->
+                    case layout of
+                        LayoutMode.Write ->
+                            ( { model | layoutMode = LayoutMode.Write }, Cmd.none )
+
+                        LayoutMode.Focus ->
+                            ( { model | layoutMode = LayoutMode.Focus }, Cmd.none )
+
+                        LayoutMode.Read ->
+                            ( model, Cmd.none )
+
+                PullDown.Nothing ->
                     ( model, Cmd.none )
+
+        GotListCloudFiles response ->
+            case response of
+                Ok files ->
+                    ( { model | cloudFiles = files }, Cmd.none )
+
+                Err _ ->
+                    ( model, Cmd.none )
+
+        GotCloudFile file response ->
+            case response of
+                Ok text ->
+                    ( { model
+                        | note =
+                            { name = file
+                            , lastModified = Nothing
+                            , text = text
+                            }
+                      }
+                    , Cmd.batch [ sendTitle file ]
+                    )
+
+                Err _ ->
+                    ( model, Cmd.none )
+
+        GotPostCloudResponse response ->
+            ( model, Cmd.none )
 
 
 
@@ -212,9 +308,11 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div [ class <| "app-wrapper " ++ themeClass model.colorTheme ]
+    div
+        [ class <| "app-wrapper " ++ themeClass model.colorTheme ]
         [ viewNavigation model
-        , div [ class <| "app-layout " ++ layoutClass model.layoutMode ]
+        , div
+            [ class <| "app-layout " ++ layoutClass model.layoutMode ]
             [ viewEditor model
             , lazy viewPreview model.note
             , viewControl model
@@ -233,22 +331,72 @@ viewNavigation model =
             { id = "File"
             , label = "File"
             , checked = False
+            , message = PullDown.Nothing
             , children =
                 PullDown.Children
                     [ { id = "File/New"
                       , label = "New"
                       , children = PullDown.empty
+                      , message = PullDown.NewFile
                       , checked = False
                       }
                     , { id = "File/Open"
                       , label = "Open"
                       , children = PullDown.empty
+                      , message = PullDown.OpenFile
                       , checked = False
                       }
                     , { id = "File/Save"
                       , label = "Save"
                       , children = PullDown.empty
+                      , message = PullDown.SaveFile
                       , checked = False
+                      }
+                    ]
+            }
+
+        cloudPullDown =
+            { id = "Cloud"
+            , label = "Cloud"
+            , checked = False
+            , message = PullDown.Nothing
+            , children =
+                PullDown.Children
+                    [ { id = "Cloud/New"
+                      , label = "New"
+                      , checked = False
+                      , message = PullDown.NewCloudFile
+                      , children = PullDown.empty
+                      }
+                    , { id = "Cloud/Open"
+                      , label = "Open"
+                      , checked = False
+                      , message = PullDown.GetCloudFiles
+                      , children =
+                            PullDown.Children
+                                (List.map
+                                    (\file ->
+                                        { id = "Cloud/Open/" ++ file
+                                        , label = file
+                                        , checked = False
+                                        , message = PullDown.OpenCloudFile file
+                                        , children = PullDown.empty
+                                        }
+                                    )
+                                    model.cloudFiles
+                                )
+                      }
+                    , { id = "Cloud/CahngeTitle"
+                      , label = "ChangeTitle"
+                      , checked = False
+                      , message = PullDown.ChangeTitle
+                      , children = PullDown.empty
+                      }
+                    , { id = "Cloud/Save"
+                      , label = "Save"
+                      , checked = False
+                      , message = PullDown.SaveCloudFile
+                      , children = PullDown.empty
                       }
                     ]
             }
@@ -257,6 +405,7 @@ viewNavigation model =
             { id = "View"
             , label = "View"
             , checked = False
+            , message = PullDown.Nothing
             , children =
                 PullDown.Children
                     [ { id = "View/Layout"
@@ -266,11 +415,13 @@ viewNavigation model =
                                 [ { id = "View/Layout/Split"
                                   , label = "Split"
                                   , children = PullDown.empty
+                                  , message = PullDown.ChangeLayout LayoutMode.Write
                                   , checked = model.layoutMode == LayoutMode.Write
                                   }
                                 , { id = "View/Layout/Single"
                                   , label = "Single"
                                   , children = PullDown.empty
+                                  , message = PullDown.ChangeLayout LayoutMode.Focus
                                   , checked =
                                         model.layoutMode
                                             == LayoutMode.Focus
@@ -278,6 +429,7 @@ viewNavigation model =
                                             == LayoutMode.Read
                                   }
                                 ]
+                      , message = PullDown.Nothing
                       , checked = False
                       }
                     , { id = "View/Theme"
@@ -287,24 +439,29 @@ viewNavigation model =
                                 [ { id = "View/Theme/Dark"
                                   , label = "Dark"
                                   , children = PullDown.empty
+                                  , message = PullDown.ChangeTheme ColorTheme.Dark
                                   , checked = model.colorTheme == ColorTheme.Dark
                                   }
                                 , { id = "View/Theme/White"
                                   , label = "White"
                                   , children = PullDown.empty
+                                  , message = PullDown.ChangeTheme ColorTheme.White
                                   , checked = model.colorTheme == ColorTheme.White
                                   }
                                 ]
+                      , message = PullDown.Nothing
                       , checked = False
                       }
                     ]
             }
     in
-    header [ class "app-navigation" ]
-        [ nav []
+    header
+        [ class "app-navigation" ]
+        [ nav
+            []
             [ Html.map GotPullDownMsg <|
                 PullDown.view
-                    [ filePullDown, viewPullDown ]
+                    [ filePullDown, cloudPullDown, viewPullDown ]
                     PullDown.rootLevel
             ]
         ]
@@ -414,6 +571,9 @@ updateWithStorage msg model =
 
 
 port changeText : String -> Cmd msg
+
+
+port sendTitle : String -> Cmd msg
 
 
 port setStorage : Encode.Value -> Cmd msg

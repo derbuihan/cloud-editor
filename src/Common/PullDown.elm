@@ -7,6 +7,7 @@ module Common.PullDown exposing
     , view
     )
 
+import ColorTheme exposing (ColorTheme)
 import Html
     exposing
         ( Html
@@ -22,6 +23,7 @@ import Html.Attributes
         , classList
         )
 import Html.Events exposing (onClick)
+import LayoutMode exposing (LayoutMode)
 
 
 type alias Id =
@@ -29,13 +31,24 @@ type alias Id =
 
 
 type Msg
-    = OnClick Id
+    = NewFile
+    | OpenFile
+    | SaveFile
+    | NewCloudFile
+    | GetCloudFiles
+    | OpenCloudFile String
+    | SaveCloudFile
+    | ChangeTitle
+    | ChangeTheme ColorTheme
+    | ChangeLayout LayoutMode
+    | Nothing
 
 
 type alias PullDown =
     { id : Id
     , label : String
     , children : Children
+    , message : Msg
     , checked : Bool
     }
 
@@ -77,7 +90,7 @@ viewPullDown level pullDown =
             else
                 li
                     [ classList [ ( "app-pulldown--checked", pullDown.checked ) ]
-                    , onClick (OnClick pullDown.id)
+                    , onClick pullDown.message
                     ]
                     [ text pullDown.label ]
 

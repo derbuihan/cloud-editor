@@ -1,8 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "start": "parcel ./public/index.html --dist-dir build",
-    "build": "parcel build ./public/index.html ./public/service-worker.js --dist-dir build",
+    "start": "wrangler pages dev --kv files --live-reload ./build --experimental-enable-local-persistence",
+    "watch": "parcel watch ./public/index.html --dist-dir build",
+    "build": "parcel build ./public/index.html ./public/service-worker.js --dist-dir build  --no-source-maps",
     "test": "elm-test",
     "clean": "rm build/*"
   },
@@ -15,7 +16,8 @@
     "elm-hot": "^1.1.6",
     "elm-test": "^0.19.1-revision7",
     "node-elm-compiler": "^5.0.6",
-    "parcel": "^2.3.1"
+    "parcel": "^2.3.1",
+    "wrangler": "^2.0.24"
   },
   "dependencies": {
     "regenerator-runtime": "^0.13.9"

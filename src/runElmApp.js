@@ -17,7 +17,7 @@ const runElmApp = () => {
         const { filename, hasUnsavedChange } = appState;
         document.title = `${hasUnsavedChange ? "* " : ""}${
             filename ? `${filename} - ` : ""
-        }Nekobito`;
+        }MD Editor`;
     };
 
     const handleLoadFile = (file) => {
@@ -72,6 +72,12 @@ const runElmApp = () => {
         setDocumentTitle();
     });
 
+    app.ports.sendTitle.subscribe((filename) => {
+        appState.filename = filename;
+        appState.hasUnsavedChange = false;
+        setDocumentTitle();
+    });
+
     // create a new file
     app.ports.saveFile.subscribe(async (text) => {
         const file = await fileHandleManager.createFile(text);
@@ -82,11 +88,6 @@ const runElmApp = () => {
             lastModified,
             text,
         });
-    });
-
-    app.ports.changeText.subscribe(() => {
-        appState.hasUnsavedChange = true;
-        setDocumentTitle();
     });
 };
 
