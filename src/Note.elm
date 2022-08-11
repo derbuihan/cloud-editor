@@ -3,8 +3,6 @@
 
 module Note exposing (Id, Note, decode, new, toTitle)
 
-import Json.Decode as Decode
-
 
 type alias Id =
     Int
