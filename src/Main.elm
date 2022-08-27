@@ -12,7 +12,8 @@ port module Main exposing
     , view
     )
 
-import Browser
+import Base64 exposing (decode, encode)
+import Browser exposing (element)
 import ColorTheme exposing (ColorTheme)
 import Common.PullDown as PullDown exposing (Msg)
 import Html
@@ -125,7 +126,7 @@ type Msg
     | GotPullDownMsg PullDown.Msg
     | GotListCloudFiles (Result Http.Error (List String))
     | GotCloudFile String (Result Http.Error String)
-    | GotPostCloudResponse (Result Http.Error String)
+    | GotPostCloudResponse String (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -146,8 +147,8 @@ update msg model =
         saveCloudFile note =
             Http.post
                 { url = "files/" ++ note.name
-                , body = Http.stringBody "application/json" note.text
-                , expect = Http.expectString GotPostCloudResponse
+                , body = Http.stringBody "" (Base64.encode note.text)
+                , expect = Http.expectString (GotPostCloudResponse note.name)
                 }
     in
     case msg of
@@ -261,22 +262,30 @@ update msg model =
 
         GotCloudFile file response ->
             case response of
-                Ok text ->
-                    ( { model
-                        | note =
-                            { name = file
-                            , lastModified = Nothing
-                            , text = text
-                            }
-                      }
-                    , Cmd.batch [ sendTitle file, getCloudList ]
-                    )
+                Ok encoded_text ->
+                    case Base64.decode encoded_text of
+                        Ok text ->
+                            ( { model
+                                | note =
+                                    { name = file
+                                    , lastModified = Nothing
+                                    , text = text
+                                    }
+                              }
+                            , Cmd.batch
+                                [ sendTitle file
+                                , getCloudList
+                                ]
+                            )
+
+                        Err _ ->
+                            ( model, Cmd.none )
 
                 Err _ ->
                     ( model, Cmd.none )
 
-        GotPostCloudResponse _ ->
-            ( model, Cmd.none )
+        GotPostCloudResponse name _ ->
+            ( model, Cmd.batch [ sendTitle name ] )
 
 
 
