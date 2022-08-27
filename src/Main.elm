@@ -130,6 +130,26 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        getCloudList =
+            Http.get
+                { url = "files"
+                , expect = Http.expectJson GotListCloudFiles (Decode.list Decode.string)
+                }
+
+        getCloudFile file =
+            Http.get
+                { url = "files/" ++ file
+                , expect = Http.expectString (GotCloudFile file)
+                }
+
+        saveCloudFile note =
+            Http.post
+                { url = "files/" ++ note.name
+                , body = Http.stringBody "application/json" note.text
+                , expect = Http.expectString GotPostCloudResponse
+                }
+    in
     case msg of
         OnInput newBody ->
             let
@@ -201,29 +221,13 @@ update msg model =
                             ( model, Cmd.batch [ saveFile model.note.text ] )
 
                 PullDown.GetCloudFiles ->
-                    ( model
-                    , Http.get
-                        { url = "files"
-                        , expect = Http.expectJson GotListCloudFiles (Decode.list Decode.string)
-                        }
-                    )
+                    ( model, getCloudList )
 
                 PullDown.OpenCloudFile file ->
-                    ( model
-                    , Http.get
-                        { url = "files/" ++ file
-                        , expect = Http.expectString (GotCloudFile file)
-                        }
-                    )
+                    ( model, getCloudFile file )
 
                 PullDown.SaveCloudFile ->
-                    ( model
-                    , Http.post
-                        { url = "files/" ++ model.note.name
-                        , body = Http.stringBody "application/json" model.note.text
-                        , expect = Http.expectString GotPostCloudResponse
-                        }
-                    )
+                    ( model, saveCloudFile model.note )
 
                 PullDown.ChangeTheme theme ->
                     case theme of
@@ -265,13 +269,13 @@ update msg model =
                             , text = text
                             }
                       }
-                    , Cmd.batch [ sendTitle file ]
+                    , Cmd.batch [ sendTitle file, getCloudList ]
                     )
 
                 Err _ ->
                     ( model, Cmd.none )
 
-        GotPostCloudResponse response ->
+        GotPostCloudResponse _ ->
             ( model, Cmd.none )
 
 
