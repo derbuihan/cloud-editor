@@ -34,11 +34,9 @@ type Msg
     = NewFile
     | OpenFile
     | SaveFile
-    | NewCloudFile
     | GetCloudFiles
     | OpenCloudFile String
     | SaveCloudFile
-    | ChangeTitle
     | ChangeTheme ColorTheme
     | ChangeLayout LayoutMode
     | Nothing

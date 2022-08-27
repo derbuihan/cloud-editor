@@ -200,13 +200,6 @@ update msg model =
                         Nothing ->
                             ( model, Cmd.batch [ saveFile model.note.text ] )
 
-                PullDown.NewCloudFile ->
-                    ( { model
-                        | note = Note.new
-                      }
-                    , Cmd.batch [ sendTitle model.note.name ]
-                    )
-
                 PullDown.GetCloudFiles ->
                     ( model
                     , Http.get
@@ -231,25 +224,6 @@ update msg model =
                         , expect = Http.expectString GotPostCloudResponse
                         }
                     )
-
-                PullDown.ChangeTitle ->
-                    let
-                        title =
-                            Note.toTitle model.note
-                    in
-                    if title == "" then
-                        ( model, Cmd.batch [ sendTitle model.note.name ] )
-
-                    else
-                        ( { model
-                            | note =
-                                { name = title
-                                , lastModified = model.note.lastModified
-                                , text = model.note.text
-                                }
-                          }
-                        , Cmd.batch [ sendTitle title ]
-                        )
 
                 PullDown.ChangeTheme theme ->
                     case theme of
@@ -362,13 +336,7 @@ viewNavigation model =
             , message = PullDown.Nothing
             , children =
                 PullDown.Children
-                    [ { id = "Cloud/New"
-                      , label = "New"
-                      , checked = False
-                      , message = PullDown.NewCloudFile
-                      , children = PullDown.empty
-                      }
-                    , { id = "Cloud/Open"
+                    [ { id = "Cloud/Open"
                       , label = "Open"
                       , checked = False
                       , message = PullDown.GetCloudFiles
@@ -385,12 +353,6 @@ viewNavigation model =
                                     )
                                     model.cloudFiles
                                 )
-                      }
-                    , { id = "Cloud/CahngeTitle"
-                      , label = "ChangeTitle"
-                      , checked = False
-                      , message = PullDown.ChangeTitle
-                      , children = PullDown.empty
                       }
                     , { id = "Cloud/Save"
                       , label = "Save"
