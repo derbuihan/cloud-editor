@@ -5,7 +5,8 @@
     "watch": "parcel watch ./public/index.html --dist-dir build",
     "build": "parcel build ./public/index.html ./public/service-worker.js --dist-dir build  --no-source-maps",
     "test": "elm-test",
-    "clean": "rm build/*"
+    "clean": "rm build/*",
+    "deploy": "wrangler pages publish build"
   },
   "devDependencies": {
     "@parcel/packager-raw-url": "^2.3.1",
